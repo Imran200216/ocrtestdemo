@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ocrtestdemo/config/app_colors/colors.dart';
-import 'package:ocrtestdemo/features/splash_screen/splash_desktop_screen.dart';
-import 'package:ocrtestdemo/features/splash_screen/splash_mobile_screen.dart';
-import 'package:ocrtestdemo/features/splash_screen/splash_tablet_screen.dart';
+import 'package:ocrtestdemo/features/splash/splash_desktop_screen.dart';
+import 'package:ocrtestdemo/features/splash/splash_mobile_screen.dart';
+import 'package:ocrtestdemo/features/splash/splash_tablet_screen.dart';
+
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});

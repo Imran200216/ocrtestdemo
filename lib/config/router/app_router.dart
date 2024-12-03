@@ -4,7 +4,7 @@ import 'package:ocrtestdemo/features/auth/login_auth/login_auth_screen.dart';
 import 'package:ocrtestdemo/features/auth/register_auth/register_auth_screen.dart';
 import 'package:ocrtestdemo/features/home/home_screen.dart';
 import 'package:ocrtestdemo/features/result/result_screen.dart';
-import 'package:ocrtestdemo/features/splash_screen/splash_screen.dart';
+import 'package:ocrtestdemo/features/splash/splash_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppRouter {
@@ -18,18 +18,6 @@ class AppRouter {
         builder: (context, state) {
           return const SplashScreen();
         },
-        redirect: (context, state) {
-          final user = Supabase.instance.client.auth.currentUser;
-
-          // Check authentication status
-          if (user != null) {
-            // User is authenticated, redirect to home screen
-            return '/homeScreen';
-          } else {
-            // User is not authenticated, redirect to login screen
-            return '/loginScreen';
-          }
-        },
       ),
 
       /// Login screen
@@ -42,11 +30,14 @@ class AppRouter {
         redirect: (context, state) {
           final user = Supabase.instance.client.auth.currentUser;
 
-          // If the user is authenticated, redirect to home screen
+          // Check authentication status
           if (user != null) {
+            // User is authenticated, redirect to home screen
             return '/homeScreen';
+          } else {
+            // User is not authenticated, redirect to login screen
+            return '/loginScreen';
           }
-          return null; // Proceed to the login screen
         },
       ),
 

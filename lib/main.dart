@@ -45,7 +45,7 @@ class _MyAppState extends State<MyApp> {
         return MaterialApp.router(
           routerConfig: AppRouter().router,
           debugShowCheckedModeBanner: false,
-          title: 'OCR Demo',
+          title: 'OCR Lens',
           theme: ThemeData(
             scaffoldBackgroundColor: AppColors.scaffoldBgColor,
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
