@@ -1,43 +1,74 @@
 import 'package:go_router/go_router.dart';
-import 'package:ocrtestdemo/screens/auth/forget_password_auth/forget_password_screen.dart';
-import 'package:ocrtestdemo/screens/auth/login_auth/login_auth_screen.dart';
-import 'package:ocrtestdemo/screens/auth/register_auth/register_auth_screen.dart';
-import 'package:ocrtestdemo/screens/home/home_screen.dart';
-import 'package:ocrtestdemo/screens/result/result_screen.dart';
-import 'package:ocrtestdemo/screens/splash_screen/splash_screen.dart';
+import 'package:ocrtestdemo/features/auth/forget_password_auth/forget_password_screen.dart';
+import 'package:ocrtestdemo/features/auth/login_auth/login_auth_screen.dart';
+import 'package:ocrtestdemo/features/auth/register_auth/register_auth_screen.dart';
+import 'package:ocrtestdemo/features/home/home_screen.dart';
+import 'package:ocrtestdemo/features/result/result_screen.dart';
+import 'package:ocrtestdemo/features/splash_screen/splash_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppRouter {
   GoRouter router = GoRouter(
     initialLocation: "/",
     routes: [
-      /// splash screen
+      /// Splash screen
       GoRoute(
         path: "/",
         name: "splashScreen",
         builder: (context, state) {
           return const SplashScreen();
         },
+        redirect: (context, state) {
+          final user = Supabase.instance.client.auth.currentUser;
+
+          // Check authentication status
+          if (user != null) {
+            // User is authenticated, redirect to home screen
+            return '/homeScreen';
+          } else {
+            // User is not authenticated, redirect to login screen
+            return '/loginScreen';
+          }
+        },
       ),
 
-      /// auth screen (Login screen)
+      /// Login screen
       GoRoute(
         path: "/loginScreen",
         name: "loginScreen",
         builder: (context, state) {
           return const LoginAuthScreen();
         },
+        redirect: (context, state) {
+          final user = Supabase.instance.client.auth.currentUser;
+
+          // If the user is authenticated, redirect to home screen
+          if (user != null) {
+            return '/homeScreen';
+          }
+          return null; // Proceed to the login screen
+        },
       ),
 
-      /// auth screen (register screen)
+      /// Register screen
       GoRoute(
         path: "/registerScreen",
         name: "registerScreen",
         builder: (context, state) {
           return const RegisterAuthScreen();
         },
+        redirect: (context, state) {
+          final user = Supabase.instance.client.auth.currentUser;
+
+          // If the user is authenticated, redirect to home screen
+          if (user != null) {
+            return '/homeScreen';
+          }
+          return null; // Proceed to the register screen
+        },
       ),
 
-      /// auth screen (forget screen)
+      /// Forget password screen
       GoRoute(
         path: "/forgetPasswordScreen",
         name: "forgetPasswordScreen",
@@ -46,7 +77,7 @@ class AppRouter {
         },
       ),
 
-      /// home screen
+      /// Home screen
       GoRoute(
         path: "/homeScreen",
         name: "homeScreen",
@@ -55,7 +86,7 @@ class AppRouter {
         },
       ),
 
-      /// result screen
+      /// Result screen
       GoRoute(
         path: "/resultScreen",
         name: "resultScreen",
