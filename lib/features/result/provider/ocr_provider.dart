@@ -40,7 +40,6 @@ class OCRProvider extends ChangeNotifier {
       final result = await FilePicker.platform.pickFiles();
 
       if (result != null) {
-        // Check if running on the web
         if (result.files.first.bytes != null) {
           _pickedFileBytes = result.files.first.bytes;
           _pickedFilePath = null; // Clear file path for web
@@ -49,14 +48,12 @@ class OCRProvider extends ChangeNotifier {
           _pickedFileBytes = null; // Clear bytes for native
         }
 
-        /// Show success snack bar
         CustomSuccessSnackBar.showSuccessAwesomeSnackBar(
           context: context,
           title: 'Success!',
           message: 'Image picked successfully!',
         );
       } else {
-        /// Show error snack bar
         CustomFailureSnackBar.showFailureAwesomeSnackBar(
           context: context,
           title: 'Error!',
@@ -67,7 +64,7 @@ class OCRProvider extends ChangeNotifier {
       debugPrint("Error picking file: $e");
     } finally {
       _isLoading = false;
-      notifyListeners(); // Notify listeners to hide loading state
+      notifyListeners();
     }
   }
 
@@ -90,15 +87,12 @@ class OCRProvider extends ChangeNotifier {
           'uploaded_image_${DateTime.now().millisecondsSinceEpoch}';
 
       if (_pickedFileBytes != null) {
-        // Upload for web platform
         await _supabase.storage.from(bucket).uploadBinary(
               fileName,
               _pickedFileBytes!,
             );
       } else if (_pickedFilePath != null) {
-        // Upload for native platform
-        final file =
-            File(_pickedFilePath!); // Convert the file path to a File object
+        final file = File(_pickedFilePath!);
         await _supabase.storage.from(bucket).upload(
               fileName,
               file,
@@ -128,7 +122,6 @@ class OCRProvider extends ChangeNotifier {
     _pickedFileBytes = null;
     _isLoading = false;
 
-    /// Show success snack bar
     CustomSuccessSnackBar.showSuccessAwesomeSnackBar(
       context: context,
       title: 'Success!',
@@ -139,25 +132,27 @@ class OCRProvider extends ChangeNotifier {
   }
 
   Future<void> processBusinessCard(BuildContext context, File? image) async {
-    // Check if the image is null
-    if (image == null || !await image.exists()) {
-      CustomFailureSnackBar.showFailureAwesomeSnackBar(
-        context: context,
-        title: 'Error!',
-        message: 'No valid image selected for processing!',
-      );
-      return;
-    }
-
-    setProcessing(true); // Start processing by setting the state
+    setProcessing(true);
 
     try {
-      // Recognize text from the image
+      // Handle image for both web and native platforms
+      if (image == null && _pickedFileBytes != null) {
+        final tempDir = Directory.systemTemp;
+        final tempFile = File('${tempDir.path}/temp_image.jpg');
+        await tempFile.writeAsBytes(_pickedFileBytes!);
+        image = tempFile;
+      }
+
+      if (image == null || !await image.exists()) {
+        throw Exception('No valid image selected for processing!');
+      }
+
+      // Process the image with Google ML Kit's text recognizer
       final inputImage = InputImage.fromFile(image);
       final RecognizedText recognizedText =
           await _textRecognizer.processImage(inputImage);
 
-      // Extract entities from the recognized text
+      // Extract entities using the entity extractor
       final List<EntityAnnotation> extractEntities =
           await _entityExtractor.annotateText(
         recognizedText.text,
@@ -165,32 +160,90 @@ class OCRProvider extends ChangeNotifier {
           EntityType.email,
           EntityType.phone,
           EntityType.address,
-          EntityType.unknown,
           EntityType.url,
+          EntityType.unknown,
         ],
       );
 
-      // Organize entities into a Map
-      final Map<String, List<String>> extractedData = {};
-      for (var entity in extractEntities) {
-        for (var type in entity.entities) {
-          final key = type.type.toString();
-          extractedData[key] = (extractedData[key] ?? [])..add(type.rawValue);
+      // Initialize a structured data map
+      final Map<String, List<Map<String, String>>> structuredData = {
+        'contacts': [],
+        'addresses': [],
+        'general': [],
+        'social_media': [],
+        'others': [],
+      };
+
+      // Add extracted entities to the corresponding categories
+      for (final entity in extractEntities) {
+        if (entity.text.isNotEmpty) {
+          final String type =
+              _mapEntityTypeToCustomType(entity.entities.first.type);
+          final Map<String, String> entityData = {
+            'data': entity.text,
+            'type': type,
+          };
+
+          switch (type) {
+            case 'Email':
+              structuredData['contacts']?.add(entityData);
+              break;
+            case 'Phone Number':
+              structuredData['contacts']?.add(entityData);
+              break;
+            case 'Company Destination':
+              structuredData['addresses']?.add(entityData);
+              break;
+            case 'Company Website':
+              structuredData['social_media']?.add(entityData);
+              break;
+            default:
+              structuredData['others']?.add(entityData);
+          }
         }
+      }
+
+      // Avoid duplications by adding recognized text blocks into 'general' category
+      for (var block in recognizedText.blocks) {
+        for (var line in block.lines) {
+          if (!structuredData['general']!
+              .any((item) => item['data'] == line.text)) {
+            structuredData['general']
+                ?.add({'data': line.text, 'type': 'General'});
+          }
+        }
+      }
+
+      // Ensure structuredData has valid entries before proceeding
+      // Ensure structuredData has valid entries before proceeding
+      if (structuredData.isEmpty ||
+          (structuredData['contacts']?.isEmpty ?? true) &&
+              (structuredData['addresses']?.isEmpty ?? true) &&
+              (structuredData['social_media']?.isEmpty ?? true) &&
+              (structuredData['others']?.isEmpty ?? true)) {
+        CustomFailureSnackBar.showFailureAwesomeSnackBar(
+          context: context,
+          title: "No Entities Found",
+          message: "The image does not contain recognizable data.",
+        );
+        return;
       }
 
       // Upload the image to Supabase Storage
       final filePath = 'images/${DateTime.now().toIso8601String()}.jpg';
-      final String uploadedPath = await _supabase.storage
-          .from('images') // Replace with your bucket name
-          .upload(filePath, image);
+      final String uploadedPath =
+          await _supabase.storage.from('images').upload(filePath, image);
 
-      // Save data in Supabase database
-      await _supabase.from('business_card_data').insert({
+      // Insert structured data into the database using .select()
+      final response = await _supabase.from('business_card_data').insert({
         'image_url': uploadedPath,
-        'entities': json.encode(extractedData),
-        // Encoding the extracted data as JSON
-      });
+        'entities': json.encode(structuredData),
+      }).single();
+
+      if (response.toString() != null) {
+        throw Exception(
+            'Error inserting data into Supabase: ${response.toString()}');
+      }
 
       CustomSuccessSnackBar.showSuccessAwesomeSnackBar(
         context: context,
@@ -198,13 +251,29 @@ class OCRProvider extends ChangeNotifier {
         message: 'Business card processed successfully!',
       );
     } catch (e) {
+      debugPrint("Error in processBusinessCard: $e");
       CustomFailureSnackBar.showFailureAwesomeSnackBar(
         context: context,
         title: "Error in processing",
         message: e.toString(),
       );
     } finally {
-      setProcessing(false); // Stop processing by resetting the state
+      setProcessing(false);
+    }
+  }
+
+  String _mapEntityTypeToCustomType(EntityType type) {
+    switch (type) {
+      case EntityType.email:
+        return 'Email';
+      case EntityType.address:
+        return 'Company Destination';
+      case EntityType.phone:
+        return 'Phone Number';
+      case EntityType.url:
+        return 'Company Website';
+      default:
+        return 'Others';
     }
   }
 }

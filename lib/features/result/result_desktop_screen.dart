@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ocrtestdemo/commons/custom_icon_btn.dart';
 import 'package:ocrtestdemo/commons/custom_ocr_text_field_with_btn.dart';
 import 'package:ocrtestdemo/config/app_colors/colors.dart';
 
@@ -78,6 +79,36 @@ class ResultDesktopScreen extends StatelessWidget {
                 ),
               ),
             ),
+
+            const SizedBox(
+              height: 20,
+            ),
+
+            CustomIconBtn(
+              btnWidget: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.arrow_back_rounded,
+                    size: 16,
+                    color: AppColors.secondaryColor,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Back to Home",
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              onTap: () {},
+              btnHeight: 48,
+              btnWidth: double.infinity,
+              btnColor: AppColors.gradientColor,
+            )
           ],
         ),
       ),
