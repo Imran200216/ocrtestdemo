@@ -84,28 +84,13 @@ class ResultTabletScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            /// Dynamically generate 10 text fields
-            ...labels.map(
-                  (label) => Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: CustomOCRTextFieldWithBtn(
-                  labelText: label,
-                  hintText: 'Enter $label',
-                  prefixIcon: Icons.auto_awesome_outlined,
-                  suffixIcon: Icons.copy,
-                  onSuffixIconPressed: () {
-                    // Handle copy action for this specific field
-                  },
-                  onButtonPressed: () {
-                    // Handle button action for this specific field
-                  },
-                  buttonText: 'Select',
-                  borderColor: AppColors.subTitleColor,
-                  buttonColor: AppColors.primaryColor,
-                  buttonTextColor: AppColors.secondaryColor,
-                  controller: TextEditingController(),
-                ),
-              ),
+            /// name text field
+            CustomOCRTextField(
+              labelText: "Name",
+              hintText: "name",
+              prefixIcon: Icons.auto_awesome_outlined,
+              suffixIcon: Icons.copy,
+              onSuffixIconPressed: () {},
             ),
           ],
         ),

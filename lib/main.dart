@@ -34,9 +34,12 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        /// ocr provider for processing business card
         ChangeNotifierProvider(
           create: (context) => OCRProvider(),
         ),
+
+        /// email  auth provider
         ChangeNotifierProvider(
           create: (context) => EmailAuthProvider(),
         ),

@@ -2,8 +2,14 @@ import 'package:go_router/go_router.dart';
 import 'package:ocrtestdemo/features/auth/forget_password_auth/forget_password_screen.dart';
 import 'package:ocrtestdemo/features/auth/login_auth/login_auth_screen.dart';
 import 'package:ocrtestdemo/features/auth/register_auth/register_auth_screen.dart';
+import 'package:ocrtestdemo/features/home/home_desktop_screen.dart';
+import 'package:ocrtestdemo/features/home/home_mobile_screen.dart';
 import 'package:ocrtestdemo/features/home/home_screen.dart';
+import 'package:ocrtestdemo/features/home/home_tablet_screen.dart';
+import 'package:ocrtestdemo/features/result/result_desktop_screen.dart';
+import 'package:ocrtestdemo/features/result/result_mobile_screen.dart';
 import 'package:ocrtestdemo/features/result/result_screen.dart';
+import 'package:ocrtestdemo/features/result/result_tablet_screen.dart';
 import 'package:ocrtestdemo/features/splash/splash_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -68,7 +74,7 @@ class AppRouter {
         },
       ),
 
-      /// Home screen
+      /// Home screen (Common Screen)
       GoRoute(
         path: "/homeScreen",
         name: "homeScreen",
@@ -77,12 +83,66 @@ class AppRouter {
         },
       ),
 
-      /// Result screen
+      /// Home Screen (mobile screen)
+      GoRoute(
+        path: "/homeMobileScreen",
+        name: "homeMobileScreen",
+        builder: (context, state) {
+          return const HomeMobileScreen();
+        },
+      ),
+
+      /// Home Screen (web screen)
+      GoRoute(
+        path: "/homeDesktopScreen",
+        name: "homeDesktopScreen",
+        builder: (context, state) {
+          return const HomeDesktopScreen();
+        },
+      ),
+
+      /// Home Screen (Tablet Screen)
+      GoRoute(
+        path: "/homeTabletScreen",
+        name: "homeTabletScreen",
+        builder: (context, state) {
+          return const HomeTabletScreen();
+        },
+      ),
+
+      /// Result screen (Common screen)
       GoRoute(
         path: "/resultScreen",
         name: "resultScreen",
         builder: (context, state) {
           return const ResultScreen();
+        },
+      ),
+
+      /// Result screen (mobile screen)
+      GoRoute(
+        path: "/resultMobileScreen",
+        name: "resultMobileScreen",
+        builder: (context, state) {
+          return const ResultMobileScreen();
+        },
+      ),
+
+      /// Result screen (desktop screen)
+      GoRoute(
+        path: "/resultDesktopScreen",
+        name: "resultDesktopScreen",
+        builder: (context, state) {
+          return const ResultDesktopScreen();
+        },
+      ),
+
+      /// Result Screen (tabletScreen)
+      GoRoute(
+        path: "/resultTabScreen",
+        name: "resultTabScreen",
+        builder: (context, state) {
+          return const ResultTabletScreen();
         },
       ),
     ],

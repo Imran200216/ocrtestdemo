@@ -74,7 +74,7 @@ class HomeMobileScreen extends StatelessWidget {
                         onTap: () {
                           if (ocrProvider.pickedFileBytes == null &&
                               ocrProvider.pickedFilePath == null) {
-                            ocrProvider.pickFile(context);
+                            ocrProvider.pickImage(context);
                           }
                         },
                         child: DottedBorder(
@@ -132,8 +132,9 @@ class HomeMobileScreen extends StatelessWidget {
                                                               context);
                                                         },
                                                         onDelete: () {
-                                                          ocrProvider.clearFile(
-                                                              context);
+                                                          ocrProvider
+                                                              .clearImage(
+                                                                  context);
                                                           Navigator.pop(
                                                               context);
                                                         },
@@ -189,7 +190,7 @@ class HomeMobileScreen extends StatelessWidget {
                                                     TextButton(
                                                       onPressed: () {
                                                         ocrProvider
-                                                            .pickFile(context);
+                                                            .pickImage(context);
                                                       },
                                                       child: Text(
                                                         "Choose file",
@@ -259,7 +260,7 @@ class HomeMobileScreen extends StatelessWidget {
                                   .setProcessing(true); // Set processing state
 
                               // Upload the file first
-                              await ocrProvider.uploadFile(context);
+                              await ocrProvider.uploadImage(context);
 
                               // Proceed with the OCR processing after the upload
                               if (ocrProvider.pickedFilePath != null) {
@@ -276,6 +277,9 @@ class HomeMobileScreen extends StatelessWidget {
 
                                 // After processing is complete, navigate to the result screen
                                 context.pushNamed("resultScreen");
+
+                                /// clear image
+                                ocrProvider.clearImage(context);
                               } else {
                                 throw Exception(
                                     'No valid image file path found!');

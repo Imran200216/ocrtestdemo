@@ -1,27 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ocrtestdemo/commons/custom_ocr_text_field_with_btn.dart';
 import 'package:ocrtestdemo/config/app_colors/colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ResultMobileScreen extends StatelessWidget {
   const ResultMobileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // List of label texts for the 10 text fields
-    final List<String> labels = [
-      'Name',
-      'Address',
-      'Phone Number',
-      'Email',
-      'Company Name',
-      'Designation',
-      'Website',
-      'Department',
-      'Country',
-      'City'
-    ];
+    /// supabase initialization
+    final supabase = Supabase.instance.client;
+
+    /// fetching the data form DB
+    final ocrDetailsStream = supabase.from("business_card_data").stream(
+      primaryKey: ['id'],
+    );
+
 
     return Center(
       child: Container(
@@ -84,28 +79,67 @@ class ResultMobileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            /// Dynamically generate 10 text fields
-            ...labels.map(
-              (label) => Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: CustomOCRTextFieldWithBtn(
-                  labelText: label,
-                  hintText: 'Enter $label',
-                  prefixIcon: Icons.auto_awesome_outlined,
-                  suffixIcon: Icons.copy,
-                  onSuffixIconPressed: () {
-                    // Handle copy action for this specific field
-                  },
-                  onButtonPressed: () {
-                    // Handle button action for this specific field
-                  },
-                  buttonText: 'Select',
-                  borderColor: AppColors.subTitleColor,
-                  buttonColor: AppColors.primaryColor,
-                  buttonTextColor: AppColors.secondaryColor,
-                  controller: TextEditingController(),
-                ),
-              ),
+            StreamBuilder(
+              stream: ocrDetailsStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  final ocrData = snapshot.data!;
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    scrollDirection: Axis.vertical,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: ocrData.length,
+                    separatorBuilder: (context, index) {
+                      return const SizedBox(
+                        height: 14,
+                      );
+                    },
+                    itemBuilder: (context, index) {
+                      /// to get the project documents
+                      final ocr = ocrData[index];
+                      final ocrId = ocr['id'].toString();
+
+                      return Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          color: Colors.pink.shade100,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 22,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(ocr['phoneNumber'] ?? "No phone number"),
+                              Text(ocr['emailAddress'] ?? "No email address"),
+                              Text(ocr['companyName'] ?? "No company name"),
+                              Text(ocr['personDesignation'] ??
+                                  "No person designation"),
+                              Text(ocr['companyWebsite'] ??
+                                  "No company website"),
+                              Text(ocr['others'] ?? "No others"),
+                              Text(ocr['personName'] ?? "No person name"),
+                              Text(ocr['companyAddress'] ??
+                                  "No company address"),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  return const Center(child: Text('No projects found.'));
+                }
+              },
             ),
           ],
         ),

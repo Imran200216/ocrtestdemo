@@ -1,9 +1,8 @@
-import 'dart:typed_data';
-import 'dart:convert';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ocrtestdemo/commons/custom_snack_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,22 +31,34 @@ class OCRProvider extends ChangeNotifier {
     notifyListeners(); // Notify listeners to update UI
   }
 
-  Future<void> pickFile(BuildContext context) async {
+  /// picking an image
+  Future<void> pickImage(BuildContext context) async {
     _isLoading = true;
-    notifyListeners(); // Notify listeners to show loading state
+    notifyListeners();
 
     try {
-      final result = await FilePicker.platform.pickFiles();
+      final picker = ImagePicker();
+      final pickedImage = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
 
-      if (result != null) {
-        if (result.files.first.bytes != null) {
-          _pickedFileBytes = result.files.first.bytes;
-          _pickedFilePath = null; // Clear file path for web
+      if (pickedImage != null) {
+        if (kIsWeb) {
+          // For web, use the image as bytes
+          _pickedFileBytes = await pickedImage.readAsBytes();
+          _pickedFilePath = null; // No file path on web
         } else {
-          _pickedFilePath = result.files.first.path;
-          _pickedFileBytes = null; // Clear bytes for native
+          // For native platforms, use the image file path
+          _pickedFilePath = pickedImage.path;
+          _pickedFileBytes = await pickedImage.readAsBytes();
         }
 
+        debugPrint('Picked File Path: $_pickedFilePath');
+        debugPrint('Picked File Bytes Length: ${_pickedFileBytes?.length}');
+
+        // Success notification
         CustomSuccessSnackBar.showSuccessAwesomeSnackBar(
           context: context,
           title: 'Success!',
@@ -57,23 +68,29 @@ class OCRProvider extends ChangeNotifier {
         CustomFailureSnackBar.showFailureAwesomeSnackBar(
           context: context,
           title: 'Error!',
-          message: 'Please pick an image to proceed!',
+          message: 'No image selected!',
         );
       }
     } catch (e) {
-      debugPrint("Error picking file: $e");
+      debugPrint("Error picking image: $e");
+      CustomFailureSnackBar.showFailureAwesomeSnackBar(
+        context: context,
+        title: 'Error!',
+        message: 'Failed to pick an image. Please try again!',
+      );
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> uploadFile(BuildContext context) async {
-    if (_pickedFilePath == null && _pickedFileBytes == null) {
+  /// uploading an image
+  Future<void> uploadImage(BuildContext context) async {
+    if (_pickedFileBytes == null && _pickedFilePath == null) {
       CustomFailureSnackBar.showFailureAwesomeSnackBar(
         context: context,
         title: 'Error!',
-        message: 'No file selected for upload!',
+        message: 'No image selected for upload!',
       );
       return;
     }
@@ -87,16 +104,14 @@ class OCRProvider extends ChangeNotifier {
           'uploaded_image_${DateTime.now().millisecondsSinceEpoch}';
 
       if (_pickedFileBytes != null) {
-        await _supabase.storage.from(bucket).uploadBinary(
-              fileName,
-              _pickedFileBytes!,
-            );
+        // Upload image bytes for web
+        await _supabase.storage
+            .from(bucket)
+            .uploadBinary(fileName, _pickedFileBytes!);
       } else if (_pickedFilePath != null) {
+        // Upload image file path for mobile/tablet
         final file = File(_pickedFilePath!);
-        await _supabase.storage.from(bucket).upload(
-              fileName,
-              file,
-            );
+        await _supabase.storage.from(bucket).upload(fileName, file);
       }
 
       CustomSuccessSnackBar.showSuccessAwesomeSnackBar(
@@ -105,11 +120,11 @@ class OCRProvider extends ChangeNotifier {
         message: 'Image uploaded to Supabase successfully!',
       );
     } catch (e) {
-      debugPrint("Error uploading file: $e");
+      debugPrint("Error uploading image: $e");
       CustomFailureSnackBar.showFailureAwesomeSnackBar(
         context: context,
         title: 'Upload Failed!',
-        message: 'Failed to upload the file. Please try again!',
+        message: 'Failed to upload the image. Please try again!',
       );
     } finally {
       _isLoading = false;
@@ -117,7 +132,8 @@ class OCRProvider extends ChangeNotifier {
     }
   }
 
-  void clearFile(BuildContext context) {
+  /// clearing an image
+  void clearImage(BuildContext context) {
     _pickedFilePath = null;
     _pickedFileBytes = null;
     _isLoading = false;
@@ -125,7 +141,7 @@ class OCRProvider extends ChangeNotifier {
     CustomSuccessSnackBar.showSuccessAwesomeSnackBar(
       context: context,
       title: 'Success!',
-      message: 'Image deleted successfully!',
+      message: 'Image cleared successfully!',
     );
 
     notifyListeners();
@@ -135,14 +151,20 @@ class OCRProvider extends ChangeNotifier {
     setProcessing(true);
 
     try {
-      // Handle image for both web and native platforms
-      if (image == null && _pickedFileBytes != null) {
+      // Handle the web-specific case
+      if (kIsWeb && _pickedFileBytes != null) {
         final tempDir = Directory.systemTemp;
         final tempFile = File('${tempDir.path}/temp_image.jpg');
         await tempFile.writeAsBytes(_pickedFileBytes!);
-        image = tempFile;
+        image = tempFile; // Use the tempFile created from bytes for web
       }
 
+      // Handle the native platform case
+      if (!kIsWeb && image == null && _pickedFilePath != null) {
+        image = File(_pickedFilePath!); // Use file path on mobile platforms
+      }
+
+      // Check if a valid image is available
       if (image == null || !await image.exists()) {
         throw Exception('No valid image selected for processing!');
       }
@@ -165,68 +187,46 @@ class OCRProvider extends ChangeNotifier {
         ],
       );
 
-      // Initialize a structured data map
-      final Map<String, List<Map<String, String>>> structuredData = {
-        'contacts': [],
-        'addresses': [],
-        'general': [],
-        'social_media': [],
-        'others': [],
-      };
+      // Initialize variables for storing extracted data
+      String? phoneNumber;
+      String? emailAddress;
+      String? companyName;
+      String? companyAddress;
+      String? personName;
+      String? others;
+      String? companyWebsite;
 
-      // Add extracted entities to the corresponding categories
+      // Extract data from the entity annotations
       for (final entity in extractEntities) {
-        if (entity.text.isNotEmpty) {
-          final String type =
-              _mapEntityTypeToCustomType(entity.entities.first.type);
-          final Map<String, String> entityData = {
-            'data': entity.text,
-            'type': type,
-          };
-
-          switch (type) {
-            case 'Email':
-              structuredData['contacts']?.add(entityData);
+        if (entity.entities.isNotEmpty) {
+          switch (entity.entities.first.type) {
+            case EntityType.unknown:
+              others ??= entity.text;
               break;
-            case 'Phone Number':
-              structuredData['contacts']?.add(entityData);
+            case EntityType.phone:
+              phoneNumber ??= entity.text;
               break;
-            case 'Company Destination':
-              structuredData['addresses']?.add(entityData);
+            case EntityType.email:
+              emailAddress ??= entity.text;
               break;
-            case 'Company Website':
-              structuredData['social_media']?.add(entityData);
+            case EntityType.address:
+              companyAddress ??= entity.text;
+              break;
+            case EntityType.url:
+              companyWebsite ??= entity.text;
               break;
             default:
-              structuredData['others']?.add(entityData);
+              break;
           }
         }
       }
 
-      // Avoid duplications by adding recognized text blocks into 'general' category
-      for (var block in recognizedText.blocks) {
-        for (var line in block.lines) {
-          if (!structuredData['general']!
-              .any((item) => item['data'] == line.text)) {
-            structuredData['general']
-                ?.add({'data': line.text, 'type': 'General'});
-          }
-        }
-      }
-
-      // Ensure structuredData has valid entries before proceeding
-      // Ensure structuredData has valid entries before proceeding
-      if (structuredData.isEmpty ||
-          (structuredData['contacts']?.isEmpty ?? true) &&
-              (structuredData['addresses']?.isEmpty ?? true) &&
-              (structuredData['social_media']?.isEmpty ?? true) &&
-              (structuredData['others']?.isEmpty ?? true)) {
-        CustomFailureSnackBar.showFailureAwesomeSnackBar(
-          context: context,
-          title: "No Entities Found",
-          message: "The image does not contain recognizable data.",
-        );
-        return;
+      // Assign recognized text to additional fields if not found in entities
+      if (recognizedText.blocks.isNotEmpty) {
+        personName ??= recognizedText.blocks.first.text.split('\n').first;
+        companyName ??= recognizedText.blocks.length > 1
+            ? recognizedText.blocks[1].text.split('\n').first
+            : null;
       }
 
       // Upload the image to Supabase Storage
@@ -234,21 +234,29 @@ class OCRProvider extends ChangeNotifier {
       final String uploadedPath =
           await _supabase.storage.from('images').upload(filePath, image);
 
-      // Insert structured data into the database using .select()
+      // Insert structured data into the database
       final response = await _supabase.from('business_card_data').insert({
         'image_url': uploadedPath,
-        'entities': json.encode(structuredData),
-      }).single();
+        'phoneNumber': phoneNumber,
+        'emailAddress': emailAddress,
+        'companyName': companyName,
+        'companyAddress': companyAddress,
+        'personName': personName,
+        'companyWebsite': companyWebsite,
+        'others': others,
+      });
 
-      if (response.toString() != null) {
+      // Check for errors in the response
+      if (response.error != null) {
         throw Exception(
-            'Error inserting data into Supabase: ${response.toString()}');
+            'Error inserting data into Supabase: ${response.error.message}');
       }
 
+      // Success notification
       CustomSuccessSnackBar.showSuccessAwesomeSnackBar(
         context: context,
         title: "Success",
-        message: 'Business card processed successfully!',
+        message: 'Business card processed and saved successfully!',
       );
     } catch (e) {
       debugPrint("Error in processBusinessCard: $e");
@@ -259,21 +267,6 @@ class OCRProvider extends ChangeNotifier {
       );
     } finally {
       setProcessing(false);
-    }
-  }
-
-  String _mapEntityTypeToCustomType(EntityType type) {
-    switch (type) {
-      case EntityType.email:
-        return 'Email';
-      case EntityType.address:
-        return 'Company Destination';
-      case EntityType.phone:
-        return 'Phone Number';
-      case EntityType.url:
-        return 'Company Website';
-      default:
-        return 'Others';
     }
   }
 }

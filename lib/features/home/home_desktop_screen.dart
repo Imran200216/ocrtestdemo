@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -68,7 +69,7 @@ class HomeDesktopScreen extends StatelessWidget {
                       onTap: () {
                         if (ocrProvider.pickedFileBytes == null &&
                             ocrProvider.pickedFilePath == null) {
-                          ocrProvider.pickFile(context);
+                          ocrProvider.pickImage(context);
                         }
                       },
                       child: DottedBorder(
@@ -119,8 +120,8 @@ class HomeDesktopScreen extends StatelessWidget {
                                                         Navigator.pop(context);
                                                       },
                                                       onDelete: () {
-                                                        ocrProvider
-                                                            .clearFile(context);
+                                                        ocrProvider.clearImage(
+                                                            context);
                                                         Navigator.pop(context);
                                                       },
                                                     );
@@ -173,7 +174,7 @@ class HomeDesktopScreen extends StatelessWidget {
                                                   TextButton(
                                                     onPressed: () {
                                                       ocrProvider
-                                                          .pickFile(context);
+                                                          .pickImage(context);
                                                     },
                                                     child: Text(
                                                       "Choose file",
@@ -237,33 +238,50 @@ class HomeDesktopScreen extends StatelessWidget {
                           try {
                             print(
                                 "Picked file path: ${ocrProvider.pickedFilePath}"); // Debug log
+                            print(
+                                "Picked file bytes length: ${ocrProvider.pickedFileBytes?.length}"); // Debug log
 
                             // Start OCR processing, show animation
                             ocrProvider
                                 .setProcessing(true); // Set processing state
 
-                            // Upload the file first
-                            await ocrProvider.uploadFile(context);
+                            // Upload the file first (if it's not null)
+                            await ocrProvider.uploadImage(context);
 
-                            // Proceed with the OCR processing after the upload
-                            if (ocrProvider.pickedFilePath != null) {
+                            // For web, use bytes directly
+                            if (kIsWeb && ocrProvider.pickedFileBytes != null) {
+                              final imageBytes = ocrProvider.pickedFileBytes!;
+                              print("Processing image from bytes...");
+
+                              // Create a temporary file from the bytes (for web)
+                              final tempFile = File(
+                                  '${Directory.systemTemp.path}/temp_image.jpg');
+                              await tempFile.writeAsBytes(imageBytes);
+
+                              // Proceed with OCR processing using the temporary file
+                              await ocrProvider.processBusinessCard(
+                                  context, tempFile);
+                            } else if (ocrProvider.pickedFilePath != null) {
+                              // For mobile, use the file path (if not null)
                               final image = File(ocrProvider.pickedFilePath!);
                               print(
-                                  "Processing file: ${image.path}"); // Debug log
+                                  "Processing file from path: ${image.path}"); // Debug log
 
-                              // Show the Lottie animation and process the business card
+                              // Proceed with OCR processing
                               await ocrProvider.processBusinessCard(
                                   context, image);
-
-                              // Set processing to false after the process is done
-                              ocrProvider.setProcessing(false);
-
-                              // After processing is complete, navigate to the result screen
-                              context.pushNamed("resultScreen");
                             } else {
-                              throw Exception(
-                                  'No valid image file path found!');
+                              throw Exception('No valid image file found!');
                             }
+
+                            // Set processing to false after the process is done
+                            ocrProvider.setProcessing(false);
+
+                            // After processing is complete, navigate to the result screen
+                            context.pushNamed("resultScreen");
+
+                            /// clear image
+                            ocrProvider.clearImage(context);
                           } catch (error) {
                             // Handle errors gracefully and set processing to false in case of error
                             ocrProvider.setProcessing(false);
