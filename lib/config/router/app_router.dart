@@ -1,6 +1,12 @@
 import 'package:go_router/go_router.dart';
+import 'package:ocrtestdemo/features/auth/forget_password_auth/forget_password_desktop_screen.dart';
+import 'package:ocrtestdemo/features/auth/forget_password_auth/forget_password_mobile_screen.dart';
 import 'package:ocrtestdemo/features/auth/forget_password_auth/forget_password_screen.dart';
+import 'package:ocrtestdemo/features/auth/forget_password_auth/forget_password_tablet_screen.dart';
+import 'package:ocrtestdemo/features/auth/login_auth/login_auth_desktop_screen.dart';
+import 'package:ocrtestdemo/features/auth/login_auth/login_auth_mobile_screen.dart';
 import 'package:ocrtestdemo/features/auth/login_auth/login_auth_screen.dart';
+import 'package:ocrtestdemo/features/auth/login_auth/login_auth_tablet_screen.dart';
 import 'package:ocrtestdemo/features/auth/register_auth/register_auth_screen.dart';
 import 'package:ocrtestdemo/features/home/home_desktop_screen.dart';
 import 'package:ocrtestdemo/features/home/home_mobile_screen.dart';
@@ -26,7 +32,7 @@ class AppRouter {
         },
       ),
 
-      /// Login screen
+      /// Login screen (Common Screen)
       GoRoute(
         path: "/loginScreen",
         name: "loginScreen",
@@ -43,6 +49,69 @@ class AppRouter {
           } else {
             // User is not authenticated, redirect to login screen
             return '/loginScreen';
+          }
+        },
+      ),
+
+      /// login screen (Desktop)
+      GoRoute(
+        path: "/loginDesktopScreen",
+        name: "loginDesktopScreen",
+        builder: (context, state) {
+          return const LoginAuthDesktopScreen();
+        },
+        redirect: (context, state) {
+          final user = Supabase.instance.client.auth.currentUser;
+
+          // Check authentication status
+          if (user != null) {
+            // User is authenticated, redirect to home screen
+            return '/homeDesktopScreen';
+          } else {
+            // User is not authenticated, redirect to login screen
+            return '/loginDesktopScreen';
+          }
+        },
+      ),
+
+      /// login screen (tablet)
+      GoRoute(
+        path: "/loginTabletScreen",
+        name: "loginTabletScreen",
+        builder: (context, state) {
+          return const LoginAuthTabletScreen();
+        },
+        redirect: (context, state) {
+          final user = Supabase.instance.client.auth.currentUser;
+
+          // Check authentication status
+          if (user != null) {
+            // User is authenticated, redirect to home screen
+            return '/homeTabletScreen';
+          } else {
+            // User is not authenticated, redirect to login screen
+            return '/loginTabletScreen';
+          }
+        },
+      ),
+
+      /// login screen (mobile)
+      GoRoute(
+        path: "/loginMobileScreen",
+        name: "loginMobileScreen",
+        builder: (context, state) {
+          return const LoginAuthMobileScreen();
+        },
+        redirect: (context, state) {
+          final user = Supabase.instance.client.auth.currentUser;
+
+          // Check authentication status
+          if (user != null) {
+            // User is authenticated, redirect to home screen
+            return '/homeMobileScreen';
+          } else {
+            // User is not authenticated, redirect to login screen
+            return '/loginMobileScreen';
           }
         },
       ),
@@ -65,12 +134,39 @@ class AppRouter {
         },
       ),
 
-      /// Forget password screen
+      /// Forget password screen(Common screen)
       GoRoute(
         path: "/forgetPasswordScreen",
         name: "forgetPasswordScreen",
         builder: (context, state) {
           return const ForgetPasswordScreen();
+        },
+      ),
+
+      /// Forget password screen (Desktop Screen)
+      GoRoute(
+        path: "/forgetPasswordDesktopScreen",
+        name: "forgetPasswordDesktopScreen",
+        builder: (context, state) {
+          return const ForgetPasswordDesktopScreen();
+        },
+      ),
+
+      /// Forget password screen (tablet Screen)
+      GoRoute(
+        path: "/forgetPasswordTabletScreen",
+        name: "forgetPasswordTabletScreen",
+        builder: (context, state) {
+          return const ForgetPasswordTabletScreen();
+        },
+      ),
+
+      /// Forget password screen (Mobile Screen)
+      GoRoute(
+        path: "/forgetPasswordMobileScreen",
+        name: "forgetPasswordMobileScreen",
+        builder: (context, state) {
+          return const ForgetPasswordMobileScreen();
         },
       ),
 
@@ -139,8 +235,8 @@ class AppRouter {
 
       /// Result Screen (tabletScreen)
       GoRoute(
-        path: "/resultTabScreen",
-        name: "resultTabScreen",
+        path: "/resultTabletScreen",
+        name: "resultTabletScreen",
         builder: (context, state) {
           return const ResultTabletScreen();
         },
